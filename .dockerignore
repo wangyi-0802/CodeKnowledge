@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.pyo
+.git/
+.gitignore
+.vscode/
+.idea/
+.pytest_cache/
+.mypy_cache/
+chroma_data/
+repo_cache/
+*.log
+tests/
+README.md
+Dockerfile
+docker-compose.yml
+.venv/
