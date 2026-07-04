@@ -11,6 +11,7 @@ venv/
 *.db
 chroma_data/
 repo_cache/
+models/
 build/
 dist/
 *.log

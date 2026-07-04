@@ -1,4 +1,4 @@
-﻿"""Orchestration pipeline: ingest repo -> build index -> serve agent."""
+"""Orchestration pipeline: ingest repo -> build index -> serve agent."""
 from __future__ import annotations
 from pathlib import Path
 from typing import Any
@@ -38,6 +38,7 @@ class CodeKnowledgePipeline:
         self.vector_store = VectorStore(
             collection_name="code_knowledge",
             persist_dir=self.settings.vector_store_path,
+            embedder=self.embedder,
         )
         self.retriever = Retriever(
             vector_store=self.vector_store,
@@ -94,7 +95,7 @@ class CodeKnowledgePipeline:
 
     def get_dependency_graph(self) -> str:
         """Build a dependency graph of the repository and return as a PNG file path.
-        
+
         Analyzes import relationships between files to create a visual
         architecture diagram showing module dependencies.
         """
@@ -102,11 +103,11 @@ class CodeKnowledgePipeline:
             return ""
         import re
         from pathlib import Path
-        
+
         repo = Path(self.repo_path)
         G = nx.DiGraph()
         module_files: dict[str, list[str]] = defaultdict(list)
-        
+
         # Find all source files and their imports
         for ext in [".py", ".js", ".ts", ".rs", ".go", ".java"]:
             for f in repo.rglob(f"*{ext}"):
@@ -116,7 +117,7 @@ class CodeKnowledgePipeline:
                 module = f.parent.name or "root"
                 module_files[module].append(rel_path)
                 G.add_node(rel_path, module=module, size=1)
-                
+
                 # Detect imports
                 try:
                     text = f.read_text(encoding="utf-8", errors="replace")
@@ -127,7 +128,7 @@ class CodeKnowledgePipeline:
                             if target:
                                 G.add_edge(rel_path, target.split(".")[0])
                     elif ext in (".js", ".ts"):
-                        imports = re.findall(r'(?:import|require)\s*\(?\s*["'"'"']\.\.?/([^"'"'"']+)', text)
+                        imports = re.findall(r'(?:import|require)\s*\(?\s*["\']\.\.?/([^"\']+)', text)
                         for imp in imports:
                             G.add_edge(rel_path, imp)
                     elif ext == ".rs":
@@ -148,41 +149,41 @@ class CodeKnowledgePipeline:
 
         if len(G.nodes) == 0:
             return ""
-        
+
         # Remove isolated nodes (keep only nodes with edges)
         isolated = [n for n in G.nodes() if G.degree(n) == 0]
         G.remove_nodes_from(isolated)
-        
+
         if len(G.nodes) == 0:
             return ""
-        
+
         # Layout and render
         plt.clf()
         fig, ax = plt.subplots(1, 1, figsize=(14, 10))
-        
+
         pos = nx.spring_layout(G, k=0.6, iterations=30, seed=42)
         modules = list(set(nx.get_node_attributes(G, "module").values()))
         colors = plt.cm.tab20(range(len(modules)))
         module_color = {m: colors[i] for i, m in enumerate(modules)}
-        
+
         node_colors = [module_color.get(G.nodes[n].get("module", "root"), "gray") for n in G.nodes()]
         node_sizes = [300 + 50 * G.out_degree(n) for n in G.nodes()]
-        
+
         nx.draw(G, pos, ax=ax, node_color=node_colors, node_size=node_sizes,
                 with_labels=True, font_size=7, font_family="sans-serif",
                 edge_color="gray", alpha=0.7, arrows=True, arrowsize=12,
                 arrowstyle="->")
-        
+
         ax.set_title("Code Repository Dependency Graph", fontsize=14, pad=20)
         ax.axis("off")
-        
+
         # Save to temp file
         out_path = os.path.join(os.environ.get("TEMP", "/tmp"), "codeknowledge_depgraph.png")
         fig.savefig(out_path, dpi=120, bbox_inches="tight")
         plt.close(fig)
-        
+
         return out_path
-    
+
     def get_index_stats(self) -> dict[str, Any]:
         all_metadata = self.vector_store.get_all_metadata()
         if not all_metadata:

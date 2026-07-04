@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     deepseek_model: str = "deepseek-chat"
     embedding_provider: str = "openai"
     embedding_model: str = "text-embedding-3-small"
+    embedding_model_path: str = ""  # Local model path for offline loading
     vector_store_path: str = "./chroma_data"
     repo_cache_path: str = "./repo_cache"
     log_level: str = "INFO"

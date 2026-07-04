@@ -8,11 +8,26 @@ from chromadb.utils import embedding_functions
 from src.config.settings import get_settings
 from src.utils.logger import get_logger
 logger = get_logger(__name__)
+
+
+class _EmbedderWrapper:
+    """Adapter: wraps our Embedder (with ModelScope fallback) as a ChromaDB EmbeddingFunction."""
+
+    def __init__(self, embedder):
+        self._embedder = embedder
+
+    def __call__(self, input: list[str]) -> list[list[float]]:
+        return self._embedder.embed(input)
+
+    def name(self) -> str:
+        return self._embedder.model
+
+
 class VectorStore:
     """Persistent vector store for code chunks using ChromaDB.
     Provides add, search, and delete operations with metadata filtering.
     """
-    def __init__(self, collection_name: str = "code_knowledge", persist_dir: str | None = None):
+    def __init__(self, collection_name: str = "code_knowledge", persist_dir: str | None = None, embedder=None):
         settings = get_settings()
         self.persist_dir = persist_dir or settings.vector_store_path
         self.collection_name = collection_name
@@ -25,6 +40,10 @@ class VectorStore:
                 api_key=settings.openai_api_key,
                 model_name=settings.embedding_model,
             )
+        elif embedder is not None:
+            # Use the provided embedder (with ModelScope fallback) instead of
+            # ChromaDB's default which downloads from HuggingFace (blocked in China).
+            self._ef = _EmbedderWrapper(embedder)
         else:
             self._ef = None
         self._collection = self._get_or_create_collection()
@@ -38,7 +57,7 @@ class VectorStore:
                 name=self.collection_name,
                 embedding_function=self._ef,
             )
-        except ValueError:
+        except (ValueError, chromadb.errors.NotFoundError):
             return self._client.create_collection(
                 name=self.collection_name,
                 embedding_function=self._ef,
@@ -53,9 +72,14 @@ class VectorStore:
             ids = [str(uuid.uuid4()) for _ in contents]
         if metadata is None:
             metadata = [{} for _ in contents]
+        # ChromaDB rejects None values in metadata — sanitize them out
+        clean_metadata = [
+            {k: v for k, v in m.items() if v is not None}
+            for m in metadata
+        ]
         self._collection.add(
             documents=contents,
-            metadatas=metadata,
+            metadatas=clean_metadata,
             ids=ids,
         )
         logger.debug("Added %d chunks to vector store", len(contents))

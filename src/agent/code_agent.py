@@ -1,4 +1,4 @@
-﻿"""Single agent implementation with ReAct loop for code understanding.
+"""Single agent implementation with ReAct loop for code understanding.
 Uses a clean function-calling loop (not LangGraph) for reliability.
 """
 from __future__ import annotations
@@ -15,20 +15,6 @@ class CodeKnowledgeAgent:
     Uses a simple loop: think -> call tool -> observe -> repeat.
     """
 
-    def __init__(
-        self,
-        tools: CodeKnowledgeTools,
-        llm_provider: str = "openai",
-        model_name: str = "gpt-4o-mini",
-        max_iterations: int = 6,
-        api_key: str = "",
-        base_url: str = "",
-    ):
-        self.tools = tools
-        self.max_iterations = max_iterations
-        self.model_name = model_name
-        self._client = self._init_client(llm_provider, api_key, base_url)
-
     def _init_client(self, provider: str, api_key: str, base_url: str) -> Any:
         from openai import OpenAI
         if provider == "deepseek":
@@ -38,7 +24,7 @@ class CodeKnowledgeAgent:
     def run(self, query: str, thread_id: str = "default") -> str:
         if thread_id not in self._conversations:
             self._conversations[thread_id] = []
-        
+
         history = self._conversations[thread_id][-6:]  # Last 3 turns max
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
         for msg in history:

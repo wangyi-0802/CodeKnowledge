@@ -84,61 +84,70 @@ class CodeKnowledgeTools:
         """Get a high-level overview of the repository structure."""
         return self.list_files("")
     def get_tool_definitions(self) -> list[dict[str, Any]]:
-        """Return tool definitions for LLM function calling."""
+        """Return tool definitions for LLM function calling (OpenAI/DeepSeek format)."""
         return [
             {
-                "name": "search_code",
-                "description": "Search the codebase for relevant code using semantic search. Use this to find functions, classes, or patterns related to the user's question.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "Natural language description of what to find",
+                "type": "function",
+                "function": {
+                    "name": "search_code",
+                    "description": "Search the codebase for relevant code using semantic search.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "query": {
+                                "type": "string",
+                                "description": "Natural language description of what to find",
+                            },
+                            "top_k": {
+                                "type": "integer",
+                                "description": "Number of results (default 8)",
+                                "default": 8,
+                            },
                         },
-                        "top_k": {
-                            "type": "integer",
-                            "description": "Number of results (default 8)",
-                            "default": 8,
-                        },
+                        "required": ["query"],
                     },
-                    "required": ["query"],
                 },
             },
             {
-                "name": "read_file",
-                "description": "Read the content of a specific file from the repository.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "file_path": {
-                            "type": "string",
-                            "description": "Relative path to the file (e.g. src/main.py)",
+                "type": "function",
+                "function": {
+                    "name": "read_file",
+                    "description": "Read the content of a specific file from the repository.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "file_path": {
+                                "type": "string",
+                                "description": "Relative path to the file (e.g. src/main.py)",
+                            },
+                            "start_line": {
+                                "type": "integer",
+                                "description": "Start line (1-indexed, 0 for beginning)",
+                                "default": 0,
+                            },
+                            "end_line": {
+                                "type": "integer",
+                                "description": "End line (0 for end of file)",
+                                "default": 0,
+                            },
                         },
-                        "start_line": {
-                            "type": "integer",
-                            "description": "Start line (1-indexed, 0 for beginning)",
-                            "default": 0,
-                        },
-                        "end_line": {
-                            "type": "integer",
-                            "description": "End line (0 for end of file)",
-                            "default": 0,
-                        },
+                        "required": ["file_path"],
                     },
-                    "required": ["file_path"],
                 },
             },
             {
-                "name": "list_files",
-                "description": "List files and directories in the repository.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "directory": {
-                            "type": "string",
-                            "description": "Directory path relative to repo root (empty for root)",
-                            "default": "",
+                "type": "function",
+                "function": {
+                    "name": "list_files",
+                    "description": "List files and directories in the repository.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "directory": {
+                                "type": "string",
+                                "description": "Directory path relative to repo root (empty for root)",
+                                "default": "",
+                            },
                         },
                     },
                 },

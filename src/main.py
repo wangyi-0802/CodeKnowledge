@@ -1,5 +1,7 @@
 """CodeKnowledge - 智能代码仓库理解系统。"""
 import os, sys
+from dotenv import load_dotenv
+load_dotenv()  # Load .env into os.environ (required for HF_ENDPOINT etc.)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import streamlit as st
 from src.pipeline import CodeKnowledgePipeline
@@ -41,7 +43,11 @@ with st.sidebar:
                     st.warning(stats.get('message', '未找到代码'))
                     status.update(label='分析警告', state='warning')
             except Exception as e:
+                import traceback
+                tb = traceback.format_exc()
+                logger.error("Ingestion failed:\n%s", tb)
                 st.error(f"分析失败：{e}")
+                st.code(tb)  # Show full traceback in UI
                 status.update(label='分析失败', state='error')
     if "show_graph" not in st.session_state:
         st.session_state.show_graph = False

@@ -36,9 +36,71 @@ class Embedder:
                 )
                 logger.info("OpenAI embedder ready: %s", self.model)
             case "huggingface":
+                import os
+                from pathlib import Path
                 from sentence_transformers import SentenceTransformer
-                self._client = SentenceTransformer(self.model)
-                logger.info("HuggingFace embedder ready: %s", self.model)
+
+                settings = get_settings()
+
+                # 1) Explicit local model path (zero network, deployment-ready)
+                model_path = settings.embedding_model_path
+                if model_path:
+                    path = Path(model_path)
+                    if not path.is_absolute():
+                        # Resolve relative to project root
+                        path = (Path(__file__).resolve().parent.parent.parent / path).resolve()
+                    if path.exists():
+                        os.environ.setdefault("HF_HUB_OFFLINE", "1")
+                        self._client = SentenceTransformer(str(path))
+                        logger.info("Embedder loaded from local path: %s", path)
+                        return
+
+                # 2) ModelScope cache
+                ms_cache = Path.home() / ".cache" / "modelscope" / self.model
+                if ms_cache.exists():
+                    try:
+                        os.environ.setdefault("HF_HUB_OFFLINE", "1")
+                        self._client = SentenceTransformer(str(ms_cache))
+                        logger.info("Embedder loaded from ModelScope cache: %s", ms_cache)
+                        return
+                    except Exception:
+                        pass
+
+                # 3) HuggingFace cache (try offline first)
+                hf_cache = Path.home() / ".cache" / "huggingface" / "hub"
+                if hf_cache.exists():
+                    try:
+                        os.environ.setdefault("HF_HUB_OFFLINE", "1")
+                        self._client = SentenceTransformer(self.model)
+                        logger.info("Embedder loaded from HuggingFace cache: %s", self.model)
+                        return
+                    except Exception:
+                        pass
+
+                # 4) Try online download via ModelScope then HuggingFace
+                os.environ.pop("HF_HUB_OFFLINE", None)
+                errors = []
+                try:
+                    from modelscope import snapshot_download
+                    model_dir = snapshot_download(self.model)
+                    self._client = SentenceTransformer(model_dir)
+                    logger.info("Embedder ready via ModelScope: %s", self.model)
+                    return
+                except Exception as e:
+                    errors.append(f"ModelScope: {e}")
+
+                try:
+                    self._client = SentenceTransformer(self.model)
+                    logger.info("Embedder ready via HuggingFace: %s", self.model)
+                    return
+                except Exception as e:
+                    errors.append(f"HuggingFace: {e}")
+
+                raise RuntimeError(
+                    f"Failed to load model '{self.model}'. "
+                    f"Set EMBEDDING_MODEL_PATH in .env to a local model directory.\n"
+                    + "\n".join(f"  [{i+1}] {err}" for i, err in enumerate(errors))
+                )
             case _:
                 raise ValueError(f"Unsupported embedding provider: {self.provider}")
 

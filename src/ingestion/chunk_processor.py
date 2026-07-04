@@ -29,15 +29,17 @@ class CodeChunk:
 
     @property
     def metadata(self) -> dict[str, Any]:
-        return {
+        meta = {
             "file_path": self.file_path,
             "symbol_name": self.symbol_name,
             "symbol_kind": self.symbol_kind,
             "start_line": self.start_line,
             "end_line": self.end_line,
             "language": self.language,
-            "parent": self.parent,
         }
+        if self.parent is not None:
+            meta["parent"] = self.parent
+        return meta
 
 
 class ChunkProcessor:
