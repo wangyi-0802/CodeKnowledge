@@ -136,7 +136,7 @@ class CodeKnowledgePipeline:
                             target = imp.split("::")[0]
                             G.add_edge(rel_path, target)
                     elif ext == ".go":
-                        imports = re.findall(r"^import\s+"(?:[\w/]+/)?(\w+)"", text, re.MULTILINE)
+                        imports = re.findall(r'^import\s+"(?:[\w/]+/)?(\w+)"', text, re.MULTILINE)
                         for imp in imports:
                             G.add_edge(rel_path, imp)
                     elif ext == ".java":
