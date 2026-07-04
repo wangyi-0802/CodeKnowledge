@@ -1,0 +1,12 @@
+services:
+  codeknowledge:
+    build: .
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./chroma_data:/app/chroma_data
+      - ./repo_cache:/app/repo_cache
+      - ./.env:/app/.env
+    env_file:
+      - .env
+    restart: unless-stopped
